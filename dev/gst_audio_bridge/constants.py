@@ -1,0 +1,24 @@
+"""
+Constants for GStreamer audio bridge.
+"""
+
+# RTP Payload types
+RTP_PAYLOAD_H264 = 96
+RTP_PAYLOAD_OPUS = 97
+
+# Default ports
+DEFAULT_VIDEO_PORT = 5000
+DEFAULT_AUDIO_PORT = 5001
+
+# Default video configuration
+DEFAULT_VIDEO_WIDTH = 640
+DEFAULT_VIDEO_HEIGHT = 480
+DEFAULT_VIDEO_FPS = 30
+
+# Default audio configuration
+DEFAULT_AUDIO_RATE = 48000
+DEFAULT_AUDIO_CHANNELS = 1
+
+# Queue configuration
+DEFAULT_QUEUE_MAX_SIZE = 100
+DEFAULT_APPSINK_MAX_BUFFERS = 10

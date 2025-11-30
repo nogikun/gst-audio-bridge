@@ -12,10 +12,17 @@ import numpy as np
 gi.require_version("Gst", "1.0")
 from gi.repository import GLib, Gst  # noqa: E402
 
+from gst_audio_bridge.base import GStreamerPipelineBase  # noqa: E402
+from gst_audio_bridge.constants import (  # noqa: E402
+    DEFAULT_APPSINK_MAX_BUFFERS,
+    DEFAULT_QUEUE_MAX_SIZE,
+    RTP_PAYLOAD_H264,
+    RTP_PAYLOAD_OPUS,
+)
 from gst_audio_bridge.schemas.listener import ListenerInitArgs  # noqa: E402
 
 
-class Listener:
+class Listener(GStreamerPipelineBase):
     """
     A simple GStreamer wrapper class to create and manage a GStreamer RX pipeline.
     Supports audio receiving via UDP using RTP with real-time data access.
@@ -33,15 +40,12 @@ class Listener:
         Args:
             args: ListenerInitArgs containing listen IP, ports, and config.
         """
-        Gst.init(None)
-
+        super().__init__()
         self.args = args
         self.config = args.config
-        self.loop: GLib.MainLoop | None = None
-        self.is_running: bool = False
 
         # Audio data queue for real-time access
-        self._audio_queue: Queue = Queue(maxsize=100)
+        self._audio_queue: Queue = Queue(maxsize=DEFAULT_QUEUE_MAX_SIZE)
 
         # Callback for audio data
         self._audio_callback: Callable[[Any], None] | None = None
@@ -57,49 +61,49 @@ class Listener:
         # Setup bus for message handling
         self._setup_bus()
 
-    def _build_pipeline(self) -> None:
-        """
-        Build the GStreamer pipeline based on the configuration.
-        """
-        pipeline_elements = []
-
-        # Audio pipeline with appsink for data capture
+    def _build_audio_pipeline(self) -> str:
+        """Build the audio pipeline string based on configuration."""
         if self.config.data_format == "encoded":
             # Capture encoded Opus data before decoding
-            audio_pipeline = (
+            return (
                 f"udpsrc port={self.args.audio_port} "
-                f'caps="application/x-rtp,media=audio,encoding-name=OPUS,payload=97" ! '
+                f'caps="application/x-rtp,media=audio,encoding-name=OPUS,payload={RTP_PAYLOAD_OPUS}" ! '
                 "rtpopusdepay ! "
                 "appsink name=audio_sink emit-signals=true sync=false"
             )
         else:
-            # Capture raw PCM data after decoding
-            # raw or torch_audio format
-            audio_pipeline = (
+            # Capture raw PCM data after decoding (raw or torch_audio format)
+            return (
                 f"udpsrc port={self.args.audio_port} "
-                f'caps="application/x-rtp,media=audio,encoding-name=OPUS,payload=97" ! '
+                f'caps="application/x-rtp,media=audio,encoding-name=OPUS,payload={RTP_PAYLOAD_OPUS}" ! '
                 "rtpopusdepay ! "
                 "opusdec ! "
                 "audioconvert ! "
                 f"audio/x-raw,format=F32LE,rate={self.config.sample_rate},"
                 f"channels={self.config.channels} ! "
-                "appsink name=audio_sink emit-signals=true sync=false max-buffers=10 drop=true"
+                f"appsink name=audio_sink emit-signals=true sync=false "
+                f"max-buffers={DEFAULT_APPSINK_MAX_BUFFERS} drop=true"
             )
 
-        pipeline_elements.append(audio_pipeline)
+    def _build_video_pipeline(self) -> str:
+        """Build the video pipeline string."""
+        return (
+            f"udpsrc port={self.args.video_port} "
+            f'caps="application/x-rtp,media=video,encoding-name=H264,payload={RTP_PAYLOAD_H264}" ! '
+            "rtph264depay ! "
+            "h264parse ! "
+            "avdec_h264 ! "
+            "videoconvert ! "
+            "autovideosink sync=false"
+        )
+
+    def _build_pipeline(self) -> None:
+        """Build the GStreamer pipeline based on the configuration."""
+        pipeline_elements = [self._build_audio_pipeline()]
 
         # Add video pipeline if video port is specified
         if self.args.video_port is not None:
-            video_pipeline = (
-                f"udpsrc port={self.args.video_port} "
-                f'caps="application/x-rtp,media=video,encoding-name=H264,payload=96" ! '
-                "rtph264depay ! "
-                "h264parse ! "
-                "avdec_h264 ! "
-                "videoconvert ! "
-                "autovideosink sync=false"
-            )
-            pipeline_elements.append(video_pipeline)
+            pipeline_elements.append(self._build_video_pipeline())
 
         self.pipeline_str = " ".join(pipeline_elements)
 
@@ -132,19 +136,8 @@ class Listener:
             return Gst.FlowReturn.ERROR
 
         try:
-            # Convert data based on format
             data = self._convert_audio_data(map_info.data)
-
-            # Put data in queue (non-blocking)
-            try:
-                self._audio_queue.put_nowait(data)
-            except Exception:
-                # Queue is full, drop oldest and add new
-                try:
-                    self._audio_queue.get_nowait()
-                    self._audio_queue.put_nowait(data)
-                except Exception:
-                    pass
+            self._enqueue_audio_data(data)
 
             # Call callback if registered
             if self._audio_callback is not None:
@@ -154,6 +147,51 @@ class Listener:
             buffer.unmap(map_info)
 
         return Gst.FlowReturn.OK
+
+    def _enqueue_audio_data(self, data: Any) -> None:
+        """
+        Add audio data to the queue, dropping oldest if full.
+
+        Args:
+            data: Audio data to enqueue.
+        """
+        try:
+            self._audio_queue.put_nowait(data)
+        except Exception:
+            # Queue is full, drop oldest and add new
+            try:
+                self._audio_queue.get_nowait()
+                self._audio_queue.put_nowait(data)
+            except Exception:
+                pass
+
+    def _convert_to_torch_tensor(self, audio_array: np.ndarray) -> Any:
+        """
+        Convert numpy array to torch tensor.
+
+        Args:
+            audio_array: Input numpy array.
+
+        Returns:
+            Torch tensor in (channels, samples) format.
+        """
+        try:
+            import torch
+        except ImportError:
+            raise ImportError(
+                "torch is required for 'torch_audio' format. "
+                "Install with: pip install torch torchaudio"
+            )
+
+        # Reshape to (channels, samples) format for torchaudio compatibility
+        if self.config.channels > 1:
+            # Interleaved to planar conversion
+            audio_array = audio_array.reshape(-1, self.config.channels).T
+        else:
+            audio_array = audio_array.reshape(1, -1)
+
+        # Convert to torch tensor
+        return torch.from_numpy(audio_array.copy())
 
     def _convert_audio_data(self, raw_data: bytes) -> Any:
         """
@@ -169,74 +207,15 @@ class Listener:
             return raw_data
 
         elif self.config.data_format == "encoded":
-            # Return as-is (already encoded)
             return raw_data
 
         elif self.config.data_format == "torch_audio":
-            # Convert to torch.Tensor
-            try:
-                import torch
-            except ImportError:
-                raise ImportError(
-                    "torch is required for 'torch_audio' format. "
-                    "Install with: pip install torch torchaudio"
-                )
-
             # Convert bytes to numpy array (F32LE = float32 little-endian)
             audio_array = np.frombuffer(raw_data, dtype=np.float32)
-
-            # Reshape to (channels, samples) format for torchaudio compatibility
-            if self.config.channels > 1:
-                # Interleaved to planar conversion
-                audio_array = audio_array.reshape(-1, self.config.channels).T
-            else:
-                audio_array = audio_array.reshape(1, -1)
-
-            # Convert to torch tensor
-            audio_tensor = torch.from_numpy(audio_array.copy())
-
-            return audio_tensor
+            return self._convert_to_torch_tensor(audio_array)
 
         else:
             return raw_data
-
-    def _setup_bus(self) -> None:
-        """
-        Setup the GStreamer bus for message handling.
-        """
-        self.bus = self.pipeline.get_bus()
-        self.bus.add_signal_watch()
-        self.bus.connect("message", self._on_message)
-
-    def _on_message(self, bus: Gst.Bus, message: Gst.Message) -> bool:
-        """
-        Callback for handling GStreamer bus messages.
-
-        Args:
-            bus: The GStreamer bus.
-            message: The message received.
-
-        Returns:
-            True to continue receiving messages.
-        """
-        msg_type = message.type
-
-        if msg_type == Gst.MessageType.EOS:
-            print("End of Stream")
-            self.stop()
-        elif msg_type == Gst.MessageType.ERROR:
-            err, debug = message.parse_error()
-            print(f"Error: {err}, {debug}")
-            self.stop()
-        elif msg_type == Gst.MessageType.WARNING:
-            warn, debug = message.parse_warning()
-            print(f"Warning: {warn}, {debug}")
-        elif msg_type == Gst.MessageType.STATE_CHANGED:
-            if message.src == self.pipeline:
-                old_state, new_state, pending_state = message.parse_state_changed()
-                print(f"Pipeline state changed: {old_state.value_nick} -> {new_state.value_nick}")
-
-        return True
 
     def set_audio_callback(self, callback: Callable[[Any], None]) -> None:
         """
@@ -284,6 +263,15 @@ class Listener:
             chunks.append(data)
         return chunks
 
+    def _run_loop(self) -> None:
+        """Run the GLib main loop in a background thread."""
+        try:
+            self.loop.run()
+        except Exception as e:
+            print(f"Main loop error: {e}")
+        finally:
+            self.is_running = False
+
     def start(self, blocking: bool = True) -> None:
         """
         Start the GStreamer pipeline.
@@ -318,42 +306,9 @@ class Listener:
             self._loop_thread = Thread(target=self._run_loop, daemon=True)
             self._loop_thread.start()
 
-    def _run_loop(self) -> None:
-        """
-        Run the GLib main loop in a background thread.
-        """
-        try:
-            self.loop.run()
-        except Exception as e:
-            print(f"Main loop error: {e}")
-        finally:
-            self.is_running = False
-
-    def stop(self) -> None:
-        """
-        Stop the GStreamer pipeline and quit the main loop.
-        """
-        if not self.is_running:
-            return
-
-        print("Stopping pipeline...")
-        self.pipeline.set_state(Gst.State.NULL)
-        self.is_running = False
-
-        if self.loop and self.loop.is_running():
-            self.loop.quit()
-
     def __call__(self) -> None:
-        """
-        Start the GStreamer pipeline (alias for start()).
-        """
+        """Start the GStreamer pipeline (alias for start())."""
         self.start()
-
-    def __del__(self) -> None:
-        """
-        Stop the GStreamer pipeline upon deletion of the object.
-        """
-        self.stop()
 
 
 if __name__ == "__main__":
