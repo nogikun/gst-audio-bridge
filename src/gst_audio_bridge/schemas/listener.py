@@ -10,13 +10,11 @@ class ListenerConfig(BaseModel):
 
     data_format: Literal["raw", "encoded", "torch_audio"] = Field(
         "raw",
-        description="Format of the audio data: 'raw' (bytes), 'encoded' (opus), "
-        "'torch_audio' (torch.Tensor).",
+        description="Format: 'raw' (bytes), 'encoded' (opus), 'torch_audio' (Tensor).",
     )
     chunk_duration_ms: int = Field(
         20,
-        description="Duration of each audio chunk in milliseconds. "
-        "Common values: 10, 20, 40, 60ms.",
+        description="Duration of each audio chunk in ms. Common values: 10, 20, 40, 60.",
     )
     sample_rate: int = Field(
         48000,

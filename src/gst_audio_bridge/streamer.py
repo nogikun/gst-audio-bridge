@@ -21,8 +21,8 @@ class Streamer:
         Initialize the GStreamer TX pipeline.
 
         Args:
-            args: StreamerInitArgs containing destination IP, ports, and optional
-                  video/audio configs.
+            args: StreamerInitArgs containing destination IP, ports,
+                  and optional video/audio configs.
         """
         Gst.init(None)
 

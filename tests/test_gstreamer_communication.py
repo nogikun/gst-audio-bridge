@@ -54,9 +54,9 @@ class TestPipelineParsing:
 
     def test_audio_rx_pipeline_parse(self):
         """Test that RX audio pipeline can be parsed."""
+        caps = "application/x-rtp,media=audio,encoding-name=OPUS,payload=97"
         pipeline_str = (
-            "udpsrc port=15002 "
-            'caps="application/x-rtp,media=audio,encoding-name=OPUS,payload=97" ! '
+            f'udpsrc port=15002 caps="{caps}" ! '
             "rtpopusdepay ! "
             "opusdec ! "
             "audioconvert ! "
@@ -97,13 +97,13 @@ class TestAudioStreaming:
         num_buffers = 50  # Number of buffers to send
 
         # Create TX pipeline (sender)
-        tx_pipeline_str = (
-            f"audiotestsrc is-live=true num-buffers={num_buffers} wave=sine ! "
-            "audio/x-raw,rate=48000,channels=1 ! "
-            "opusenc ! "
-            "rtpopuspay pt=97 ! "
-            f"udpsink host=127.0.0.1 port={audio_port}"
-        )
+        tx_pipeline_str = f"""
+            audiotestsrc is-live=true num-buffers={num_buffers} wave=sine !
+            audio/x-raw,rate=48000,channels=1 !
+            opusenc !
+            rtpopuspay pt=97 !
+            udpsink host=127.0.0.1 port={audio_port}
+        """
         tx_pipeline = Gst.parse_launch(tx_pipeline_str)
 
         # Create RX pipeline (receiver)
@@ -170,13 +170,13 @@ class TestAudioStreaming:
         num_buffers = 20
 
         # Create TX pipeline
-        tx_pipeline_str = (
-            f"audiotestsrc is-live=true num-buffers={num_buffers} wave=sine freq=440 ! "
-            "audio/x-raw,rate=48000,channels=1 ! "
-            "opusenc ! "
-            "rtpopuspay pt=97 ! "
-            f"udpsink host=127.0.0.1 port={audio_port}"
-        )
+        tx_pipeline_str = f"""
+            audiotestsrc is-live=true num-buffers={num_buffers} wave=sine freq=440 !
+            audio/x-raw,rate=48000,channels=1 !
+            opusenc !
+            rtpopuspay pt=97 !
+            udpsink host=127.0.0.1 port={audio_port}
+        """
         tx_pipeline = Gst.parse_launch(tx_pipeline_str)
 
         # Create RX pipeline
@@ -309,13 +309,13 @@ class TestStreamerListenerIntegration:
         listener.set_audio_callback(on_audio)
 
         # Create a simple TX pipeline (using GStreamer directly for controlled test)
-        tx_pipeline_str = (
-            f"audiotestsrc is-live=true num-buffers=30 wave=sine ! "
-            "audio/x-raw,rate=48000,channels=1 ! "
-            "opusenc ! "
-            "rtpopuspay pt=97 ! "
-            f"udpsink host=127.0.0.1 port={audio_port}"
-        )
+        tx_pipeline_str = f"""
+            audiotestsrc is-live=true num-buffers=30 wave=sine !
+            audio/x-raw,rate=48000,channels=1 !
+            opusenc !
+            rtpopuspay pt=97 !
+            udpsink host=127.0.0.1 port={audio_port}
+        """
         tx_pipeline = Gst.parse_launch(tx_pipeline_str)
 
         try:
