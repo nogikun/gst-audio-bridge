@@ -1,9 +1,29 @@
 .venv
+.env
 
-# Ignore Python cache files
+# Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Distribution / Build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Unit test / coverage reports
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Linting
+.ruff_cache/
+.mypy_cache/
+
+# IDEs
+.vscode/
+.idea/
 
 # Ignore private documentation
 docs/!*.md

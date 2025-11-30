@@ -1,4 +1,6 @@
 # gst-audio-bridge
+[![ja](https://img.shields.io/badge/lang-ja-green.svg)](docs/README_ja.md)
+
 A lightweight GStreamer wrapper for real-time audio streaming.
 
 # 🚀 Getting Started
@@ -67,6 +69,7 @@ config = ListenerConfig(
 )
 
 args = ListenerInitArgs(
+    listen_ip="0.0.0.0",       # IP address to listen on
     audio_port=5001,           # Same port as streamer
     video_port=5000,           # Optional: for video
     config=config,

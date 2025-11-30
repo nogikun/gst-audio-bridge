@@ -1,4 +1,6 @@
 # gst-audio-bridge
+[![en](https://img.shields.io/badge/lang-en-red.svg)](../README.md)
+
 リアルタイム音声ストリーミングのための軽量GStreamerラッパー
 
 # 🚀 はじめに
@@ -67,6 +69,7 @@ config = ListenerConfig(
 )
 
 args = ListenerInitArgs(
+    listen_ip="0.0.0.0",       # リッスンするIPアドレス
     audio_port=5001,           # Streamerと同じポート
     video_port=5000,           # オプション: 映像用
     config=config,
