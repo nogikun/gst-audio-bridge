@@ -1,0 +1,60 @@
+[project]
+name = "gst-audio-bridge"
+version = "0.1.0"
+description = "A lightweight GStreamer wrapper for real-time audio streaming"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "nogikun"}
+]
+keywords = ["gstreamer", "audio", "streaming", "rtp", "udp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: System :: Networking",
+]
+dependencies = [
+    "pydantic>=2.0.0",
+    "numpy>=1.24.0",
+    "PyGObject>=3.42.0",
+]
+
+[project.optional-dependencies]
+torch = [
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/nogikun/gst-audio-bridge"
+Repository = "https://github.com/nogikun/gst-audio-bridge"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gst_audio_bridge"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E402"]  # Allow imports after gi.require_version
