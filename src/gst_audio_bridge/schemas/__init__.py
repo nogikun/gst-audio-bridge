@@ -2,14 +2,14 @@
 Schema definitions for gst-audio-bridge.
 """
 
+from gst_audio_bridge.schemas.listener import (
+    ListenerConfig,
+    ListenerInitArgs,
+)
 from gst_audio_bridge.schemas.streamer import (
+    AudioConfig,
     StreamerInitArgs,
     VideoConfig,
-    AudioConfig,
-)
-from gst_audio_bridge.schemas.listener import (
-    ListenerInitArgs,
-    ListenerConfig,
 )
 
 __all__ = [
