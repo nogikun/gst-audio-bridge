@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     pkg-config \
     libcairo2-dev \
-    libgirepository1.0-dev \
+    libgirepository-2.0-dev \
     python3-dev \
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
