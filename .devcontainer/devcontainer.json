@@ -1,0 +1,27 @@
+{
+  "name": "GStreamer Python Dev",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff" 
+      ]
+    }
+  },
+  // ライブラリのインストール
+  "postCreateCommand": "uv sync",
+
+  // ユーザーをrootではなくvscode(あるいは自動判別)にする場合は設定
+  "remoteUser": "root",
+
+  // 【重要】GStreamerでカメラや音声デバイスを使う場合の設定
+  "runArgs": [
+    "--device=/dev/video0:/dev/video0",  // カメラ
+    "--device=/dev/snd:/dev/snd",        // 音声
+    "--net=host"                         // ネットワーク通信(UDP等)を楽にするため
+  ]
+}
