@@ -7,9 +7,9 @@ and received by a Listener using GStreamer pipelines.
 
 import time
 
-import pytest
-import numpy as np
 import gi
+import numpy as np
+import pytest
 
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst  # noqa: E402
@@ -55,7 +55,8 @@ class TestPipelineParsing:
     def test_audio_rx_pipeline_parse(self):
         """Test that RX audio pipeline can be parsed."""
         pipeline_str = (
-            'udpsrc port=15002 caps="application/x-rtp,media=audio,encoding-name=OPUS,payload=97" ! '
+            "udpsrc port=15002 "
+            'caps="application/x-rtp,media=audio,encoding-name=OPUS,payload=97" ! '
             "rtpopusdepay ! "
             "opusdec ! "
             "audioconvert ! "
@@ -96,13 +97,13 @@ class TestAudioStreaming:
         num_buffers = 50  # Number of buffers to send
 
         # Create TX pipeline (sender)
-        tx_pipeline_str = f"""
-            audiotestsrc is-live=true num-buffers={num_buffers} wave=sine !
-            audio/x-raw,rate=48000,channels=1 !
-            opusenc !
-            rtpopuspay pt=97 !
-            udpsink host=127.0.0.1 port={audio_port}
-        """
+        tx_pipeline_str = (
+            f"audiotestsrc is-live=true num-buffers={num_buffers} wave=sine ! "
+            "audio/x-raw,rate=48000,channels=1 ! "
+            "opusenc ! "
+            "rtpopuspay pt=97 ! "
+            f"udpsink host=127.0.0.1 port={audio_port}"
+        )
         tx_pipeline = Gst.parse_launch(tx_pipeline_str)
 
         # Create RX pipeline (receiver)
@@ -169,13 +170,13 @@ class TestAudioStreaming:
         num_buffers = 20
 
         # Create TX pipeline
-        tx_pipeline_str = f"""
-            audiotestsrc is-live=true num-buffers={num_buffers} wave=sine freq=440 !
-            audio/x-raw,rate=48000,channels=1 !
-            opusenc !
-            rtpopuspay pt=97 !
-            udpsink host=127.0.0.1 port={audio_port}
-        """
+        tx_pipeline_str = (
+            f"audiotestsrc is-live=true num-buffers={num_buffers} wave=sine freq=440 ! "
+            "audio/x-raw,rate=48000,channels=1 ! "
+            "opusenc ! "
+            "rtpopuspay pt=97 ! "
+            f"udpsink host=127.0.0.1 port={audio_port}"
+        )
         tx_pipeline = Gst.parse_launch(tx_pipeline_str)
 
         # Create RX pipeline
@@ -221,7 +222,8 @@ class TestAudioStreaming:
                 assert audio_array.max() <= 2.0, "Audio values too high"
 
                 print(
-                    f"Sample shape: {audio_array.shape}, range: [{audio_array.min():.3f}, {audio_array.max():.3f}]"
+                    f"Sample shape: {audio_array.shape}, "
+                    f"range: [{audio_array.min():.3f}, {audio_array.max():.3f}]"
                 )
 
         finally:
@@ -239,8 +241,8 @@ class TestStreamerListenerIntegration:
 
     def test_schema_imports(self):
         """Test that schema classes can be imported."""
+        from gst_audio_bridge.schemas.listener import ListenerConfig, ListenerInitArgs
         from gst_audio_bridge.schemas.streamer import StreamerInitArgs
-        from gst_audio_bridge.schemas.listener import ListenerInitArgs, ListenerConfig
 
         # Test Streamer config
         streamer_args = StreamerInitArgs(
@@ -264,7 +266,7 @@ class TestStreamerListenerIntegration:
 
     def test_listener_class_import(self):
         """Test that Listener class can be imported and instantiated."""
-        from gst_audio_bridge import Listener, ListenerInitArgs, ListenerConfig
+        from gst_audio_bridge import Listener, ListenerConfig, ListenerInitArgs
 
         config = ListenerConfig(
             data_format="raw",
@@ -282,7 +284,7 @@ class TestStreamerListenerIntegration:
 
     def test_streamer_listener_communication(self):
         """Test actual communication between Streamer and Listener classes."""
-        from gst_audio_bridge import Listener, ListenerInitArgs, ListenerConfig
+        from gst_audio_bridge import Listener, ListenerConfig, ListenerInitArgs
 
         # Configuration
         audio_port = 17002
@@ -307,13 +309,13 @@ class TestStreamerListenerIntegration:
         listener.set_audio_callback(on_audio)
 
         # Create a simple TX pipeline (using GStreamer directly for controlled test)
-        tx_pipeline_str = f"""
-            audiotestsrc is-live=true num-buffers=30 wave=sine !
-            audio/x-raw,rate=48000,channels=1 !
-            opusenc !
-            rtpopuspay pt=97 !
-            udpsink host=127.0.0.1 port={audio_port}
-        """
+        tx_pipeline_str = (
+            f"audiotestsrc is-live=true num-buffers=30 wave=sine ! "
+            "audio/x-raw,rate=48000,channels=1 ! "
+            "opusenc ! "
+            "rtpopuspay pt=97 ! "
+            f"udpsink host=127.0.0.1 port={audio_port}"
+        )
         tx_pipeline = Gst.parse_launch(tx_pipeline_str)
 
         try:

@@ -2,15 +2,15 @@
 GStreamer RX (Receiver/Listener) pipeline wrapper.
 """
 
-from queue import Queue, Empty
-from typing import Callable, Any
+from queue import Empty, Queue
 from threading import Thread
+from typing import Any, Callable
 
-import numpy as np
 import gi
+import numpy as np
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst, GLib  # noqa: E402
+from gi.repository import GLib, Gst  # noqa: E402
 
 from gst_audio_bridge.schemas.listener import ListenerInitArgs  # noqa: E402
 
@@ -67,7 +67,7 @@ class Listener:
         if self.config.data_format == "encoded":
             # Capture encoded Opus data before decoding
             audio_pipeline = (
-                f'udpsrc port={self.args.audio_port} '
+                f"udpsrc port={self.args.audio_port} "
                 f'caps="application/x-rtp,media=audio,encoding-name=OPUS,payload=97" ! '
                 "rtpopusdepay ! "
                 "appsink name=audio_sink emit-signals=true sync=false"
@@ -76,12 +76,13 @@ class Listener:
             # Capture raw PCM data after decoding
             # raw or torch_audio format
             audio_pipeline = (
-                f'udpsrc port={self.args.audio_port} '
+                f"udpsrc port={self.args.audio_port} "
                 f'caps="application/x-rtp,media=audio,encoding-name=OPUS,payload=97" ! '
                 "rtpopusdepay ! "
                 "opusdec ! "
                 "audioconvert ! "
-                f"audio/x-raw,format=F32LE,rate={self.config.sample_rate},channels={self.config.channels} ! "
+                f"audio/x-raw,format=F32LE,rate={self.config.sample_rate},"
+                f"channels={self.config.channels} ! "
                 "appsink name=audio_sink emit-signals=true sync=false max-buffers=10 drop=true"
             )
 
@@ -90,7 +91,7 @@ class Listener:
         # Add video pipeline if video port is specified
         if self.args.video_port is not None:
             video_pipeline = (
-                f'udpsrc port={self.args.video_port} '
+                f"udpsrc port={self.args.video_port} "
                 f'caps="application/x-rtp,media=video,encoding-name=H264,payload=96" ! '
                 "rtph264depay ! "
                 "h264parse ! "
@@ -233,9 +234,7 @@ class Listener:
         elif msg_type == Gst.MessageType.STATE_CHANGED:
             if message.src == self.pipeline:
                 old_state, new_state, pending_state = message.parse_state_changed()
-                print(
-                    f"Pipeline state changed: {old_state.value_nick} -> {new_state.value_nick}"
-                )
+                print(f"Pipeline state changed: {old_state.value_nick} -> {new_state.value_nick}")
 
         return True
 
@@ -360,6 +359,7 @@ class Listener:
 if __name__ == "__main__":
     # Example usage with torch_audio format
     import time
+
     from gst_audio_bridge.schemas.listener import ListenerConfig
 
     config = ListenerConfig(

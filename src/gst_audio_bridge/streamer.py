@@ -5,7 +5,7 @@ GStreamer TX (Transmitter/Streamer) pipeline wrapper.
 import gi
 
 gi.require_version("Gst", "1.0")
-from gi.repository import Gst, GLib  # noqa: E402
+from gi.repository import GLib, Gst  # noqa: E402
 
 from gst_audio_bridge.schemas.streamer import StreamerInitArgs  # noqa: E402
 
@@ -21,7 +21,8 @@ class Streamer:
         Initialize the GStreamer TX pipeline.
 
         Args:
-            args: StreamerInitArgs containing destination IP, ports, and optional video/audio configs.
+            args: StreamerInitArgs containing destination IP, ports, and optional
+                  video/audio configs.
         """
         Gst.init(None)
 
@@ -93,9 +94,7 @@ class Streamer:
         elif msg_type == Gst.MessageType.STATE_CHANGED:
             if message.src == self.pipeline:
                 old_state, new_state, pending_state = message.parse_state_changed()
-                print(
-                    f"Pipeline state changed: {old_state.value_nick} -> {new_state.value_nick}"
-                )
+                print(f"Pipeline state changed: {old_state.value_nick} -> {new_state.value_nick}")
 
         return True
 
@@ -109,7 +108,8 @@ class Streamer:
             return
 
         print(
-            f"TX Streaming to {self.args.dest_ip} (Video:{self.args.video_port}, Audio:{self.args.audio_port})..."
+            f"TX Streaming to {self.args.dest_ip} "
+            f"(Video:{self.args.video_port}, Audio:{self.args.audio_port})..."
         )
         self.pipeline.set_state(Gst.State.PLAYING)
         self.is_running = True
@@ -152,7 +152,7 @@ class Streamer:
 
 if __name__ == "__main__":
     # Example usage
-    from gst_audio_bridge.schemas.streamer import VideoConfig, AudioConfig
+    from gst_audio_bridge.schemas.streamer import AudioConfig, VideoConfig
 
     args = StreamerInitArgs(
         dest_ip="127.0.0.1",
